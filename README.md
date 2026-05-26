@@ -1,14 +1,23 @@
 # Notch — Automation Audit Test Suite
 
-End-to-end test suite for the **Automation Audit** feature in Notch's configuration dashboard.
+QA home assignment submission. Tests the **Automation Audit** feature on `/config/guardrails`.
 
 ---
 
-## What This Tests
+## Deliverables
 
-The **Automation Audit** section on `/config/guardrails` defines deterministic rules that control whether the AI responds to a conversation or hands it off to a human. Four rule categories:
+| Part | What | Where |
+|---|---|---|
+| Part 1 | Test suite design — all 4 sub-features, 50+ test cases | [TEST-SUITE.md](TEST-SUITE.md) |
+| Part 2 | Playwright implementation — Words in User Message (config CRUD) | `tests/e2e/words-in-message.spec.ts` |
 
-| Category | Checks | Triggers |
+---
+
+## What's Being Tested
+
+The **Automation Audit** section defines deterministic rules that control whether the AI responds to a conversation or hands it off to a human.
+
+| Category | Checks | Effect |
 |---|---|---|
 | Emails patterns to unassign | Sender email address | Unassign conversation |
 | Subjects | Email subject line | Unassign conversation |
@@ -23,7 +32,6 @@ The **Automation Audit** section on `/config/guardrails` defines deterministic r
 
 - Node.js 18+
 - Google Chrome installed
-- Auth session saved in `auth/auth.json` (see below)
 
 ### Install
 
@@ -32,30 +40,26 @@ npm install
 npx playwright install chromium
 ```
 
-### Auth Setup
+### Auth
 
-The app uses Google OAuth via Descope. Auth is handled by saving a session token to `auth/auth.json`.
+The app uses Google OAuth (Descope). Auth cannot be automated — the accepted approach is to log in once manually and save the session.
 
-**If `auth/auth.json` already exists** (e.g., it's checked in with valid tokens): run tests directly.
-
-**If you need to re-authenticate:**
 ```bash
-rm auth/auth.json
+# First run — browser opens, log in with Google, session is saved automatically
 npx playwright test --headed
+
+# Subsequent runs reuse the saved session (auth/auth.json)
+npm test
 ```
-The browser will open to the login page. Sign in with Google. Once authenticated, the session is saved and tests run automatically.
+
+To force re-authentication, delete `auth/auth.json` and run again.
 
 ### Run Tests
 
 ```bash
-# Headed mode (required for initial auth; also useful for debugging)
-npm run test:headed
-
-# Standard run
-npm test
-
-# Debug mode (pauses at each step)
-npm run test:debug
+npm test                 # standard run
+npm run test:headed      # headed mode (useful for debugging)
+npm run test:debug       # pauses at each step
 ```
 
 ---
@@ -64,34 +68,33 @@ npm run test:debug
 
 ```
 /
+├── TEST-SUITE.md                          # Part 1 — full test plan (50+ cases)
 ├── tests/
 │   └── e2e/
-│       └── words-in-message.spec.ts   # Implemented test (config CRUD)
+│       └── words-in-message.spec.ts       # Part 2 — implemented tests (2 passing)
 ├── pages/
-│   ├── AutomationAuditPage.ts         # Page Object for /config/guardrails
-│   └── PlaygroundPage.ts              # Page Object for /tests/playground
+│   ├── AutomationAuditPage.ts             # POM for /config/guardrails
+│   └── PlaygroundPage.ts                  # POM for /tests/playground
 ├── auth/
-│   ├── global-setup.ts                # Handles session auth before test run
-│   └── auth.json                      # Saved session state (gitignored in prod)
-├── scripts/                           # Exploration/dev utilities (not tests)
+│   └── global-setup.ts                    # Session auth handler
 ├── playwright.config.ts
-└── tsconfig.json
+└── package.json
 ```
 
 ---
 
-## Test Design Notes
+## Implementation Notes
 
-### Why Config-Layer Tests?
+### Why config-layer tests?
 
-The Playground (`Tests → Playground`) shows a blank panel in the current environment — the email simulation form is not rendered. Full E2E tests (add keyword → send mock email → assert blocked/pass) are documented as spec-only comments in the test file, along with the exact code they would require.
+The Playground (`Tests → Playground`) renders a blank panel in the current environment — the email simulation form is not available. Full E2E tests (add keyword → send mock email via Playground → assert green/red result) are documented as spec-only test cases in `TEST-SUITE.md` and as commented code stubs in the test file itself, showing exactly what they would look like if the Playground were functional.
 
-Config-layer tests are still meaningful: the Automation Audit rules are deterministic. If a keyword is saved to the config, the AI pipeline **will** apply it — the config state IS the system state.
+Config-layer tests are meaningful on their own: the Automation Audit rules are deterministic. If a keyword is saved to the config, the AI pipeline **will** apply it — the config state is the system state.
 
-### Selector Philosophy
+### Selector philosophy
 
-All selectors are anchored on visible text content, not on styled-component class hashes (like `sc-kWtpeL`). Class hashes change on every rebuild; text content is stable unless the product copy changes intentionally.
+All selectors anchor on visible text content, not styled-component class hashes. Class hashes change on every rebuild; text content is stable unless the product copy changes intentionally.
 
-### Test Isolation
+### Test isolation
 
-Each test adds a unique `autotest_<timestamp>` keyword. `afterEach` always removes it, even on failure. No test leaves state behind.
+Each test adds a unique `autotest_<timestamp>` keyword. `afterEach` always removes it, even on failure — no test leaves state in the system.

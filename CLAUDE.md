@@ -19,19 +19,19 @@ Read these files first, in this order:
 
 ---
 
-## Project Structure (once code exists)
+## Project Structure
 
 ```
 /                          # root
 ├── CLAUDE.md              # this file
 ├── ASSIGNMENT.md          # feature spec
+├── TEST-SUITE.md          # Part 1: full test plan (50+ cases)
 ├── notch-company.md       # company context
 ├── qa-philosophy.md       # QA style guide
 ├── tests/                 # Playwright test files
-│   ├── e2e/               # end-to-end flows
-│   └── api/               # API-layer checks (if added)
+│   └── e2e/               # end-to-end flows
 ├── pages/                 # Page Object Model classes
-├── fixtures/              # test data, reusable setup
+├── auth/                  # session auth setup + saved session
 └── playwright.config.ts   # config (headed mode, base URL, timeouts)
 ```
 
@@ -57,10 +57,13 @@ Verification is done via the **Playground**: send a mock email → system shows 
 
 ---
 
-## What Already Exists
+## What Exists
 
-- Part 1 answers (written answers on QA philosophy, test suite design, tools, dilemmas) — provided by Avi, not stored as files
-- No code yet — Part 2 (Playwright implementation) is the next step
+- `TEST-SUITE.md` — Part 1: full test plan covering all 4 sub-features (50+ cases)
+- `tests/e2e/words-in-message.spec.ts` — Part 2: implemented Playwright tests (2 passing)
+- `pages/AutomationAuditPage.ts` — Page Object for guardrails config section
+- `pages/PlaygroundPage.ts` — Page Object for the Playground
+- `auth/global-setup.ts` — session auth setup
 
 ---
 
