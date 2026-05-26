@@ -1,0 +1,15 @@
+node_modules/
+dist/
+
+# Auth session — contains real session tokens, never commit
+auth/auth.json
+
+# Persistent browser profile — contains cookies/session data
+.browser-profile/
+
+# Playwright output
+test-results/
+playwright-report/
+
+# Exploration screenshots and DOM snapshots (dev utilities, not part of suite)
+screenshots/

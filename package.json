@@ -1,0 +1,22 @@
+{
+  "name": "notch-test-suite-assignment",
+  "version": "1.0.0",
+  "description": "E2E test suite for Notch Automation Audit feature",
+  "main": "index.js",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "explore": "ts-node scripts/explore.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@playwright/test": "^1.60.0",
+    "@types/node": "^25.9.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.3"
+  }
+}
