@@ -178,12 +178,11 @@ def page(context, request):
     finally:
         p.close()
         if video:
-            video_path = video.path()
             if failed:
-                with open(video_path, "rb") as f:
-                    allure.attach(
-                        f.read(),
-                        name="video_on_failure",
-                        attachment_type=allure.attachment_type.MP4,
-                    )
-            Path(video_path).unlink(missing_ok=True)
+                allure.attach(
+                    Path(video.path()).read_bytes(),
+                    name="video_on_failure",
+                    attachment_type=allure.attachment_type.WEBM,
+                )
+            else:
+                video.delete()
