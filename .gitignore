@@ -11,5 +11,9 @@ auth/auth.json
 test-results/
 playwright-report/
 
-# Exploration screenshots and DOM snapshots (dev utilities, not part of suite)
-screenshots/
+# Allure reporting
+allure-results/
+allure-report/
+
+# Environment variables (local secrets — never commit)
+.env

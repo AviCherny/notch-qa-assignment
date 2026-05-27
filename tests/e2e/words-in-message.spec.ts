@@ -26,36 +26,30 @@ import { AutomationAuditPage } from '../../pages/AutomationAuditPage';
  */
 
 const SECTION = 'Words in User Message' as const;
-const BLOCKED_WORD = `autotest_${Date.now()}`;
+
+// Each test generates its own unique keyword — no shared state, safe to run in parallel
+const uniqueWord = () => `autotest_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 
 test.describe('Words in User Message — inbound content filter', () => {
-  let auditPage: AutomationAuditPage;
-
-  test.beforeEach(async ({ page }) => {
-    auditPage = new AutomationAuditPage(page);
-  });
-
-  test.afterEach(async () => {
-    // Always clean up — runs even if the test failed mid-way
-    await auditPage.navigateTo();
-    await auditPage.removeEntry(SECTION, BLOCKED_WORD).catch(() => {
-      // Word may not have been added — nothing to clean up
-    });
-  });
-
   // ---------------------------------------------------------------------------
   // TC-01: Keyword is saved to config
   //
   // Verifies: adding a keyword via the UI persists it in the Automation Audit
   // list. This is the necessary precondition for the AI to apply the rule.
   // ---------------------------------------------------------------------------
-  test('added keyword appears in the Words in User Message list', async () => {
-    await auditPage.navigateTo();
-    await auditPage.addEntry(SECTION, BLOCKED_WORD);
+  test('added keyword appears in the Words in User Message list', async ({ page }) => {
+    const word = uniqueWord();
+    const auditPage = new AutomationAuditPage(page);
 
-    // The chip should be visible in the section
-    const entries = await auditPage.getEntries(SECTION);
-    expect(entries.some(e => e.includes(BLOCKED_WORD))).toBe(true); // chip text contains keyword
+    await auditPage.navigateTo();
+    await auditPage.addEntry(SECTION, word);
+
+    try {
+      const entries = await auditPage.getEntries(SECTION);
+      expect(entries.some(e => e.includes(word))).toBe(true);
+    } finally {
+      await auditPage.removeEntry(SECTION, word).catch(() => {});
+    }
   });
 
   // ---------------------------------------------------------------------------
@@ -64,21 +58,20 @@ test.describe('Words in User Message — inbound content filter', () => {
   // Verifies: the delete (×) on a chip removes the rule. If deletion is broken,
   // stale keywords would permanently block conversations — a high-impact bug.
   // ---------------------------------------------------------------------------
-  test('deleted keyword is removed from the Words in User Message list', async () => {
-    // Arrange: add the keyword first
+  test('deleted keyword is removed from the Words in User Message list', async ({ page }) => {
+    const word = uniqueWord();
+    const auditPage = new AutomationAuditPage(page);
+
+    // Arrange
     await auditPage.navigateTo();
-    await auditPage.addEntry(SECTION, BLOCKED_WORD);
+    await auditPage.addEntry(SECTION, word);
 
-    // Confirm it was added
-    const before = await auditPage.getEntries(SECTION);
-    expect(before.some(e => e.includes(BLOCKED_WORD))).toBe(true);
+    // Act
+    await auditPage.removeEntry(SECTION, word);
 
-    // Act: delete it
-    await auditPage.removeEntry(SECTION, BLOCKED_WORD);
-
-    // Assert: no longer in the list
+    // Assert
     const after = await auditPage.getEntries(SECTION);
-    expect(after.some(e => e.includes(BLOCKED_WORD))).toBe(false);
+    expect(after.some(e => e.includes(word))).toBe(false);
   });
 });
 
