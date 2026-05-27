@@ -1,6 +1,7 @@
 import re
 from typing import Literal
 
+import allure
 from ui.pages.base_page import BasePage
 from config import TIMEOUTS
 
@@ -21,22 +22,28 @@ class PlaygroundPage(BasePage):
     Selector strategy: role + label text / regex, not CSS class hashes.
     """
 
+    @allure.step("Navigate to Playground")
     def navigate_to(self) -> None:
         super().navigate_to("/tests/playground")
 
+    @allure.step("Fill email: {email}")
     def fill_email(self, email: str) -> None:
         self.page.get_by_role("textbox", name=re.compile(r"from|sender|email", re.I)).fill(email)
 
+    @allure.step("Fill subject: {subject}")
     def fill_subject(self, subject: str) -> None:
         self.page.get_by_role("textbox", name=re.compile(r"subject", re.I)).fill(subject)
 
+    @allure.step("Fill body: {body}")
     def fill_body(self, body: str) -> None:
         self.page.get_by_role("textbox", name=re.compile(r"message|body|content|text", re.I)).fill(body)
 
+    @allure.step("Run simulation")
     def run(self) -> None:
         self.page.get_by_role("button", name=re.compile(r"send|run|hit|submit|simulate", re.I)).click()
         self.page.wait_for_load_state("networkidle")
 
+    @allure.step("Read simulation result")
     def get_result(self) -> PlaygroundResult:
         """
         Reads the simulation result.

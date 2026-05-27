@@ -153,12 +153,16 @@ def page(context, request):
         (open at https://trace.playwright.dev)
     """
     p = context.new_page()
+    console_errors: list[str] = []
+    p.on("console", lambda msg: console_errors.append(msg.text) if msg.type == "error" else None)
     yield p
 
+    rep_setup = getattr(request.node, "rep_setup", None)
     rep_call = getattr(request.node, "rep_call", None)
-    failed = rep_call is not None and (
-        rep_call.failed
-        or (hasattr(rep_call, "wasxfail") and not rep_call.passed)
+    failed = (
+        (rep_setup is not None and rep_setup.failed)
+        or (rep_call is not None and rep_call.failed)
+        or (rep_call is not None and hasattr(rep_call, "wasxfail") and not rep_call.passed)
     )
 
     video = p.video  # capture before close; finalized on p.close()
@@ -169,6 +173,12 @@ def page(context, request):
                 name="screenshot_on_failure",
                 attachment_type=allure.attachment_type.PNG,
             )
+            if console_errors:
+                allure.attach(
+                    "\n".join(console_errors),
+                    name="console_errors",
+                    attachment_type=allure.attachment_type.TEXT,
+                )
             os.makedirs(PLAYWRIGHT_TRACE_DIR, exist_ok=True)
             trace_path = f"{PLAYWRIGHT_TRACE_DIR}/{request.node.name}.zip"
             context.tracing.stop(path=trace_path)
