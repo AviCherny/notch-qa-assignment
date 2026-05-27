@@ -25,7 +25,7 @@ import allure
 import pytest
 from playwright.sync_api import sync_playwright
 
-from config import BASE_URL, PLAYWRIGHT_TRACE_DIR, TIMEOUTS
+from config import BASE_URL, PLAYWRIGHT_TRACE_DIR, PLAYWRIGHT_VIDEO_DIR, TIMEOUTS
 
 AUTH_FILE       = Path(__file__).parent.parent / "auth" / "auth.json"
 BROWSER_PROFILE = Path(__file__).parent.parent / ".browser-profile"
@@ -133,6 +133,7 @@ def context(ensure_auth, browser):
         storage_state=str(AUTH_FILE),
         viewport={"width": 1440, "height": 900},
         base_url=BASE_URL,
+        record_video_dir=PLAYWRIGHT_VIDEO_DIR,
     )
     ctx.set_default_timeout(TIMEOUTS["element"])
     ctx.set_default_navigation_timeout(TIMEOUTS["navigation"])
@@ -160,6 +161,7 @@ def page(context, request):
         or (hasattr(rep_call, "wasxfail") and not rep_call.passed)
     )
 
+    video = p.video  # capture before close; finalized on p.close()
     try:
         if failed:
             allure.attach(
@@ -175,3 +177,13 @@ def page(context, request):
             context.tracing.stop()
     finally:
         p.close()
+        if video:
+            video_path = video.path()
+            if failed:
+                with open(video_path, "rb") as f:
+                    allure.attach(
+                        f.read(),
+                        name="video_on_failure",
+                        attachment_type=allure.attachment_type.MP4,
+                    )
+            Path(video_path).unlink(missing_ok=True)

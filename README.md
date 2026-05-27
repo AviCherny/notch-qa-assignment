@@ -55,14 +55,16 @@ tests/
  └── e2e/
      └── test_cancel_playground.py       # TC-03: add "cancel" → save → Playground → assert red
 
-pages/
- ├── base_page.py                        # shared navigate_to() with @allure.step
- ├── automation_audit_page.py            # /config/guardrails — all 4 rule sections
- └── playground_page.py                  # /tests/playground — email simulation
+ui/
+ ├── flows.py                            # navigate_to_guardrails(), navigate_to_playground()
+ └── pages/
+     ├── base_page.py                    # shared navigate_to() with @allure.step
+     ├── automation_audit_page.py        # /config/guardrails — all 4 rule sections
+     └── playground_page.py             # /tests/playground — email simulation
 
-config.py                                # BASE_URL, TIMEOUTS, PLAYWRIGHT_TRACE_DIR
+config.py                                # BASE_URL, TIMEOUTS, PLAYWRIGHT_TRACE_DIR, PLAYWRIGHT_VIDEO_DIR
 pytest.ini                               # markers, log config, -v --tb=short
-.github/workflows/playwright.yml         # CI: test → Allure report → GitHub Pages
+.github/workflows/tests.yml              # CI: test → Allure report → GitHub Pages
 ```
 
 ---
@@ -154,6 +156,7 @@ pytest --alluredir=allure-results   # generate Allure data
 
 On test failure, the framework automatically:
 - Attaches a **screenshot** to the Allure report
+- Attaches a **video recording** to the Allure report
 - Saves a **Playwright trace** to `traces/<test_name>.zip`
 
 Open any trace at [trace.playwright.dev](https://trace.playwright.dev) — full timeline, DOM snapshots, network, console.
@@ -194,4 +197,4 @@ Required GitHub secret:
 
 **`@allure.step` on BasePage** — Every `navigate_to()` call appears as a named step in the Allure report, making the test timeline readable without opening the trace.
 
-**Failure-only tracing** — Tracing runs for every test but is discarded on pass. Only failures produce a `.zip` artifact — keeps CI storage clean without sacrificing debuggability.
+**Failure-only tracing and video** — Both tracing and video recording run for every test but are discarded on pass. Only failures produce a trace `.zip` and a video attached to the Allure report — keeps CI storage clean without sacrificing debuggability.

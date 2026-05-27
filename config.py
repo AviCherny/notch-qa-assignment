@@ -10,3 +10,4 @@ TIMEOUTS = {
 }
 
 PLAYWRIGHT_TRACE_DIR = "traces/"
+PLAYWRIGHT_VIDEO_DIR = "videos/"

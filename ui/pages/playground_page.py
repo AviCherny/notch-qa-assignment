@@ -1,7 +1,7 @@
 import re
 from typing import Literal
 
-from pages.base_page import BasePage
+from ui.pages.base_page import BasePage
 from config import TIMEOUTS
 
 PlaygroundResult = Literal["pass", "blocked"]

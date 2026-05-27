@@ -14,8 +14,8 @@ doesn't affect other runs.
 import allure
 import pytest
 
-from pages.automation_audit_page import AutomationAuditPage
-from pages.playground_page import PlaygroundPage
+from ui.pages.automation_audit_page import AutomationAuditPage
+from ui.pages.playground_page import PlaygroundPage
 
 SECTION = "Words in User Message"
 BLOCKED_WORD = "cancel"

@@ -2,7 +2,7 @@ from typing import Literal
 
 from playwright.sync_api import Locator
 
-from pages.base_page import BasePage
+from ui.pages.base_page import BasePage
 
 # Values match the exact heading text rendered in the app (/config/guardrails).
 # Headings are plain div/p elements — NOT semantic h1-h6 — so we use
