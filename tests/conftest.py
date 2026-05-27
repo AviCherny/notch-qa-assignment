@@ -1,21 +1,3 @@
-"""
-Session-level fixtures and auth setup.
-
-Auth strategy (in order of preference):
-
-  1. Saved session (auth/auth.json) — reused if it exists.
-     To force re-login: delete auth/auth.json and re-run.
-
-  2. Token injection via environment variables (CI path).
-     Set NOTCH_DS_TOKEN and NOTCH_DSR_TOKEN to the values of the DS and DSR
-     cookies from browser DevTools (Application → Cookies).
-     Store as GitHub secrets — the CI workflow injects them automatically.
-
-  3. Interactive login — opens a headed Chrome window, waits for the user
-     to complete Google OAuth manually (up to 5 minutes). Session is saved
-     so subsequent runs skip this step.
-"""
-
 import json
 import logging
 import os
@@ -31,20 +13,12 @@ AUTH_FILE       = Path(__file__).parent.parent / "auth" / "auth.json"
 BROWSER_PROFILE = Path(__file__).parent.parent / ".browser-profile"
 
 
-# ---------------------------------------------------------------------------
-# Failure diagnostics hook — must be at module level to capture call outcome
-# ---------------------------------------------------------------------------
-
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
 def pytest_runtest_makereport(item, call):
     outcome = yield
     rep = outcome.get_result()
     setattr(item, "rep_" + rep.when, rep)
 
-
-# ---------------------------------------------------------------------------
-# Auth setup
-# ---------------------------------------------------------------------------
 
 def _create_auth_from_tokens(ds: str, dsr: str) -> None:
     domain = BASE_URL.replace("https://", "").replace("http://", "").split("/")[0]
@@ -102,7 +76,6 @@ def _interactive_login() -> None:
 
 @pytest.fixture(scope="session", autouse=True)
 def ensure_auth() -> None:
-    """Runs once before the suite — ensures auth/auth.json exists."""
     if AUTH_FILE.exists():
         logging.info("[auth] Reusing saved session.")
         return
@@ -116,19 +89,13 @@ def ensure_auth() -> None:
     _interactive_login()
 
 
-# ---------------------------------------------------------------------------
-# Browser fixtures
-# ---------------------------------------------------------------------------
-
 @pytest.fixture(scope="session")
 def browser_type_launch_args(browser_type_launch_args: dict) -> dict:
-    """Use real Chrome channel (avoids Google bot detection for auth)."""
     return {**browser_type_launch_args, "channel": "chrome"}
 
 
 @pytest.fixture
 def context(ensure_auth, browser):
-    """Fresh browser context per test, pre-loaded with the saved session."""
     ctx = browser.new_context(
         storage_state=str(AUTH_FILE),
         viewport={"width": 1440, "height": 900},
@@ -144,14 +111,6 @@ def context(ensure_auth, browser):
 
 @pytest.fixture
 def page(context, request):
-    """
-    One page per test with automatic failure diagnostics.
-
-    On failure:
-      - Screenshot attached to the Allure report
-      - Playwright trace saved to traces/<test_name>.zip
-        (open at https://trace.playwright.dev)
-    """
     p = context.new_page()
     console_errors: list[str] = []
     p.on("console", lambda msg: console_errors.append(msg.text) if msg.type == "error" else None)
@@ -165,7 +124,7 @@ def page(context, request):
         or (rep_call is not None and hasattr(rep_call, "wasxfail") and not rep_call.passed)
     )
 
-    video = p.video  # capture before close; finalized on p.close()
+    video = p.video
     try:
         if failed:
             allure.attach(
