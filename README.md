@@ -10,7 +10,7 @@ QA home assignment submission.
 | Part | What | Where |
 |------|------|-------|
 | Part 1 | Test suite design — all 4 sub-features, 50+ test cases | `test-plan-automation-audit.docx` |
-| Part 2 | Playwright implementation — config CRUD + full pipeline E2E | `tests/e2e/` |
+| Part 2 | Playwright implementation — full pipeline E2E | `tests/e2e/` |
 
 ---
 
@@ -24,6 +24,8 @@ The **Automation Audit** section defines deterministic rules controlling whether
 | Subjects | Email subject line | Unassign conversation |
 | Words in User Message | Customer message body | Unassign conversation |
 | Words in Assistant's Reply | AI draft reply | Suppress reply, hand to human |
+
+The implemented test covers **Words in User Message** — the full pipeline from config rule to Playground result.
 
 ---
 
@@ -44,23 +46,22 @@ The **Automation Audit** section defines deterministic rules controlling whether
 ```
 Test
  └── Page Object (extends BasePage)
-       └── BasePage — shared navigate_to(), wait_for_load_state()
+       └── BasePage — @allure.step navigate_to(), wait_for_load_state()
 ```
 
 ```
 tests/
- ├── conftest.py                         # auth setup + browser/page fixtures
+ ├── conftest.py                         # auth setup + browser/page fixtures + failure diagnostics
  └── e2e/
-     ├── test_words_in_message.py        # TC-01, TC-02: config CRUD (add / delete keyword)
-     └── test_cancel_playground.py       # TC-03, TC-04: full pipeline via Playground
+     └── test_cancel_playground.py       # TC-03: add "cancel" → save → Playground → assert red
 
 pages/
- ├── base_page.py                        # shared navigate_to()
+ ├── base_page.py                        # shared navigate_to() with @allure.step
  ├── automation_audit_page.py            # /config/guardrails — all 4 rule sections
  └── playground_page.py                  # /tests/playground — email simulation
 
-config.py                                # BASE_URL, TIMEOUTS — single source of truth
-pytest.ini                               # markers, log config
+config.py                                # BASE_URL, TIMEOUTS, PLAYWRIGHT_TRACE_DIR
+pytest.ini                               # markers, log config, -v --tb=short
 .github/workflows/playwright.yml         # CI: test → Allure report → GitHub Pages
 ```
 
@@ -100,7 +101,7 @@ pytest      # browser opens on first run, reuses session after
 
 To force re-login: `rm auth/auth.json`
 
-### 2. Token injection via environment variables (for CI or shared setups)
+### 2. Token injection via environment variables
 
 Extract your session cookies from Chrome DevTools after logging in:
 
@@ -141,12 +142,21 @@ The CI workflow restores it automatically before running tests.
 ## Running Tests
 
 ```bash
-pytest                          # all tests (headless)
-pytest --headed                 # headed mode — watch the browser
-pytest -m e2e                   # run only e2e-marked tests
-pytest -v                       # verbose output
-pytest --alluredir=allure-results  # generate Allure data
+pytest                              # run the suite
+pytest --headed                     # headed mode — watch the browser
+pytest -m e2e                       # run only e2e-marked tests
+pytest --alluredir=allure-results   # generate Allure data
 ```
+
+---
+
+## Failure Diagnostics
+
+On test failure, the framework automatically:
+- Attaches a **screenshot** to the Allure report
+- Saves a **Playwright trace** to `traces/<test_name>.zip`
+
+Open any trace at [trace.playwright.dev](https://trace.playwright.dev) — full timeline, DOM snapshots, network, console.
 
 ---
 
@@ -178,8 +188,10 @@ Required GitHub secret:
 
 **Selector strategy** — All selectors anchor on visible text or ARIA roles, never on CSS class hashes. Hashes change on every rebuild; text content changes only when the product copy changes intentionally.
 
-**Test isolation** — Every test cleans up after itself in a `finally` block, even on failure. No test leaves state in the system.
+**Test isolation** — The test cleans up after itself in a `finally` block, even on failure. No test leaves state in the system.
 
-**Save before Playground** — The config UI operates in draft mode. The Playground test explicitly calls `save()` after adding a rule — this is the necessary step for the rule to reach the AI pipeline.
+**Save before Playground** — The config UI operates in draft mode. The test explicitly calls `save()` after adding a rule — this is the step that pushes the rule to the AI pipeline. Without it, the Playground result would not reflect the config change.
 
-**Why `BasePage`** — Shared `navigate_to()` + `wait_for_load_state("networkidle")` lives in one place. One change propagates everywhere.
+**`@allure.step` on BasePage** — Every `navigate_to()` call appears as a named step in the Allure report, making the test timeline readable without opening the trace.
+
+**Failure-only tracing** — Tracing runs for every test but is discarded on pass. Only failures produce a `.zip` artifact — keeps CI storage clean without sacrificing debuggability.

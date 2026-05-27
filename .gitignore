@@ -14,10 +14,14 @@ auth/auth.json
 # Playwright / pytest output
 test-results/
 .pytest_cache/
+traces/
 
 # Allure reporting
 allure-results/
 allure-report/
+
+# Node (leftover from prior TypeScript setup)
+node_modules/
 
 # Environment variables (local secrets — never commit)
 .env

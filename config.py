@@ -8,3 +8,5 @@ TIMEOUTS = {
     "element":    10_000,
     "result":     15_000,  # Playground result render
 }
+
+PLAYWRIGHT_TRACE_DIR = "traces/"

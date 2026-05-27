@@ -17,16 +17,29 @@ Auth strategy (in order of preference):
 """
 
 import json
+import logging
 import os
 from pathlib import Path
 
+import allure
 import pytest
 from playwright.sync_api import sync_playwright
 
-from config import BASE_URL, TIMEOUTS
+from config import BASE_URL, PLAYWRIGHT_TRACE_DIR, TIMEOUTS
 
 AUTH_FILE       = Path(__file__).parent.parent / "auth" / "auth.json"
 BROWSER_PROFILE = Path(__file__).parent.parent / ".browser-profile"
+
+
+# ---------------------------------------------------------------------------
+# Failure diagnostics hook — must be at module level to capture call outcome
+# ---------------------------------------------------------------------------
+
+@pytest.hookimpl(tryfirst=True, hookwrapper=True)
+def pytest_runtest_makereport(item, call):
+    outcome = yield
+    rep = outcome.get_result()
+    setattr(item, "rep_" + rep.when, rep)
 
 
 # ---------------------------------------------------------------------------
@@ -52,10 +65,11 @@ def _create_auth_from_tokens(ds: str, dsr: str) -> None:
     }
     AUTH_FILE.parent.mkdir(parents=True, exist_ok=True)
     AUTH_FILE.write_text(json.dumps(auth_state, indent=2))
-    print("[auth] Session created from env tokens.")
+    logging.info("[auth] Session created from env tokens.")
 
 
 def _interactive_login() -> None:
+    logging.info("[auth] No saved session — opening browser for Google login.")
     print("\n[auth] No saved session found.")
     print("[auth] Opening browser — please sign in with Google.")
     print("[auth] You have 5 minutes.\n")
@@ -83,14 +97,14 @@ def _interactive_login() -> None:
         browser.storage_state(path=str(AUTH_FILE))
         browser.close()
 
-    print("[auth] Login successful. Session saved to auth/auth.json\n")
+    logging.info("[auth] Login successful. Session saved.")
 
 
 @pytest.fixture(scope="session", autouse=True)
 def ensure_auth() -> None:
     """Runs once before the suite — ensures auth/auth.json exists."""
     if AUTH_FILE.exists():
-        print("[auth] Reusing saved session.")
+        logging.info("[auth] Reusing saved session.")
         return
 
     ds  = os.getenv("NOTCH_DS_TOKEN")
@@ -122,13 +136,42 @@ def context(ensure_auth, browser):
     )
     ctx.set_default_timeout(TIMEOUTS["element"])
     ctx.set_default_navigation_timeout(TIMEOUTS["navigation"])
+    ctx.tracing.start(screenshots=True, snapshots=True, sources=True)
     yield ctx
     ctx.close()
 
 
 @pytest.fixture
-def page(context):
-    """One page per test, closed after the test completes."""
+def page(context, request):
+    """
+    One page per test with automatic failure diagnostics.
+
+    On failure:
+      - Screenshot attached to the Allure report
+      - Playwright trace saved to traces/<test_name>.zip
+        (open at https://trace.playwright.dev)
+    """
     p = context.new_page()
     yield p
-    p.close()
+
+    rep_call = getattr(request.node, "rep_call", None)
+    failed = rep_call is not None and (
+        rep_call.failed
+        or (hasattr(rep_call, "wasxfail") and not rep_call.passed)
+    )
+
+    try:
+        if failed:
+            allure.attach(
+                p.screenshot(),
+                name="screenshot_on_failure",
+                attachment_type=allure.attachment_type.PNG,
+            )
+            os.makedirs(PLAYWRIGHT_TRACE_DIR, exist_ok=True)
+            trace_path = f"{PLAYWRIGHT_TRACE_DIR}/{request.node.name}.zip"
+            context.tracing.stop(path=trace_path)
+            logging.info(f"[trace] Saved → {trace_path}  (open at trace.playwright.dev)")
+        else:
+            context.tracing.stop()
+    finally:
+        p.close()
