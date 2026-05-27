@@ -1,15 +1,19 @@
-node_modules/
-dist/
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
 
 # Auth session — contains real session tokens, never commit
 auth/auth.json
 
-# Persistent browser profile — contains cookies/session data
+# Browser profile — contains cookies/session data
 .browser-profile/
 
-# Playwright output
+# Playwright / pytest output
 test-results/
-playwright-report/
+.pytest_cache/
 
 # Allure reporting
 allure-results/

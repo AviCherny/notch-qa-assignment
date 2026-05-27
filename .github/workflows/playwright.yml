@@ -13,28 +13,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-python@v5
         with:
-          node-version: '20'
-          cache: 'npm'
+          python-version: "3.12"
 
       - name: Install dependencies
-        run: npm ci
+        run: pip install -r requirements.txt
 
       - name: Install Playwright browsers
-        run: npx playwright install chromium --with-deps
+        run: playwright install chromium --with-deps
 
       - name: Restore auth session
         run: |
           mkdir -p auth
-          echo "${{ secrets.AUTH_JSON_B64 }}" | base64 -d > auth/auth.json
+          echo "$AUTH_JSON_B64" | base64 -d > auth/auth.json
         env:
           AUTH_JSON_B64: ${{ secrets.AUTH_JSON_B64 }}
 
       - name: Run tests
-        run: npx playwright test
+        run: pytest -m e2e --alluredir=allure-results
         env:
-          NOTCH_BASE_URL: ${{ secrets.NOTCH_BASE_URL || 'https://guardio.app.getnotch.dev' }}
+          NOTCH_BASE_URL: ${{ vars.NOTCH_BASE_URL || 'https://guardio.app.getnotch.dev' }}
 
       - name: Upload allure-results
         if: always()
