@@ -89,11 +89,6 @@ def ensure_auth() -> None:
     _interactive_login()
 
 
-@pytest.fixture(scope="session")
-def browser_type_launch_args(browser_type_launch_args: dict) -> dict:
-    return {**browser_type_launch_args, "channel": "chrome"}
-
-
 @pytest.fixture
 def context(ensure_auth, browser):
     ctx = browser.new_context(
