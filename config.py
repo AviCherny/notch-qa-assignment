@@ -1,9 +1,12 @@
 import os
 
-UI_BASE_URL = os.getenv("UI_BASE_URL", "https://example.com")
+BASE_URL = os.getenv("NOTCH_BASE_URL", "https://guardio.app.getnotch.dev")
 
-# Playwright
-PLAYWRIGHT_HEADLESS = os.getenv("HEADED") != "true"
-PLAYWRIGHT_TIMEOUT = 15_000
-PLAYWRIGHT_VIDEO_DIR = "videos/"
+TIMEOUTS = {
+    "navigation": 30_000,
+    "element":    10_000,
+    "result":     15_000,
+}
+
 PLAYWRIGHT_TRACE_DIR = "traces/"
+PLAYWRIGHT_VIDEO_DIR = "videos/"

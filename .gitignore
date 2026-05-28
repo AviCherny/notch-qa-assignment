@@ -4,9 +4,13 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .playwright/
+.browser-profile/
 playwright-report/
 test-results/
 allure-results/
+allure-report/
 videos/
 traces/
 .vscode/
+.env
+auth/auth.json
