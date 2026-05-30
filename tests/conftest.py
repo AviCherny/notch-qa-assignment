@@ -42,6 +42,16 @@ def _create_auth_from_tokens(ds: str, dsr: str) -> None:
     logging.info("[auth] Session created from env tokens.")
 
 
+def _auth_json_is_valid() -> bool:
+    if not AUTH_FILE.exists():
+        return False
+    try:
+        data = json.loads(AUTH_FILE.read_text())
+        return bool(data.get("cookies") or data.get("origins"))
+    except Exception:
+        return False
+
+
 def _interactive_login() -> None:
     logging.info("[auth] No saved session — opening browser for Google login.")
     print("\n[auth] No saved session found.")
@@ -51,13 +61,13 @@ def _interactive_login() -> None:
     BROWSER_PROFILE.mkdir(parents=True, exist_ok=True)
 
     with sync_playwright() as p:
-        browser = p.chromium.launch_persistent_context(
+        ctx = p.chromium.launch_persistent_context(
             str(BROWSER_PROFILE),
             headless=False,
             channel="chrome",
             viewport={"width": 1440, "height": 900},
         )
-        page = browser.new_page()
+        page = ctx.new_page()
         page.goto(f"{BASE_URL}/config/guardrails")
         page.bring_to_front()
 
@@ -66,18 +76,19 @@ def _interactive_login() -> None:
             timeout=300_000,
         )
         page.wait_for_load_state("networkidle")
+        ctx.close()
 
-        AUTH_FILE.parent.mkdir(parents=True, exist_ok=True)
-        browser.storage_state(path=str(AUTH_FILE))
-        browser.close()
-
-    logging.info("[auth] Login successful. Session saved.")
+    logging.info("[auth] Login successful. Session stored in browser profile.")
 
 
 @pytest.fixture(scope="session", autouse=True)
 def ensure_auth() -> None:
-    if AUTH_FILE.exists():
-        logging.info("[auth] Reusing saved session.")
+    if _auth_json_is_valid():
+        logging.info("[auth] Reusing saved session from auth.json.")
+        return
+
+    if BROWSER_PROFILE.exists():
+        logging.info("[auth] Reusing browser profile session.")
         return
 
     ds  = os.getenv("NOTCH_DS_TOKEN")
@@ -89,28 +100,38 @@ def ensure_auth() -> None:
     _interactive_login()
 
 
-@pytest.fixture(scope="session")
-def browser_type_launch_args(browser_type_launch_args: dict) -> dict:
-    return {
-        **browser_type_launch_args,
-        "channel": "chrome",
-        "args": ["--no-sandbox", "--disable-dev-shm-usage"],
-    }
-
-
 @pytest.fixture
-def context(ensure_auth, browser):
-    ctx = browser.new_context(
-        storage_state=str(AUTH_FILE),
-        viewport={"width": 1440, "height": 900},
-        base_url=BASE_URL,
-        record_video_dir=PLAYWRIGHT_VIDEO_DIR,
-    )
+def context(ensure_auth, playwright):
+    # On Windows, Chrome (not Chromium) stores session cookies with DPAPI encryption.
+    # Playwright's storage_state() cannot extract them from a persistent context.
+    # When auth.json has valid tokens (CI / env-var injection), use a regular context.
+    # Otherwise, reuse the browser profile from interactive login directly.
+    browser_instance = None
+
+    if _auth_json_is_valid():
+        browser_instance = playwright.chromium.launch(channel="chrome")
+        ctx = browser_instance.new_context(
+            storage_state=str(AUTH_FILE),
+            viewport={"width": 1440, "height": 900},
+            base_url=BASE_URL,
+            record_video_dir=PLAYWRIGHT_VIDEO_DIR,
+        )
+    else:
+        ctx = playwright.chromium.launch_persistent_context(
+            str(BROWSER_PROFILE),
+            channel="chrome",
+            viewport={"width": 1440, "height": 900},
+            base_url=BASE_URL,
+            record_video_dir=PLAYWRIGHT_VIDEO_DIR,
+        )
+
     ctx.set_default_timeout(TIMEOUTS["element"])
     ctx.set_default_navigation_timeout(TIMEOUTS["navigation"])
     ctx.tracing.start(screenshots=True, snapshots=True, sources=True)
     yield ctx
     ctx.close()
+    if browser_instance:
+        browser_instance.close()
 
 
 @pytest.fixture
