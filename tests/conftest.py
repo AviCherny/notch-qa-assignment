@@ -76,9 +76,24 @@ def _interactive_login() -> None:
             timeout=300_000,
         )
         page.wait_for_load_state("networkidle")
+
+        # Extract session from the live page and save to auth.json for CI reuse.
+        # storage_state() on a persistent context returns encrypted/empty cookies on Windows,
+        # so we read directly from the live page context instead.
+        cookies = page.context.cookies()
+        local_storage = page.evaluate(
+            "() => Object.entries(localStorage).map(([name, value]) => ({name, value}))"
+        )
+        origin = BASE_URL.rstrip("/")
+        auth_state = {
+            "cookies": cookies,
+            "origins": [{"origin": origin, "localStorage": local_storage}] if local_storage else [],
+        }
+        AUTH_FILE.parent.mkdir(parents=True, exist_ok=True)
+        AUTH_FILE.write_text(json.dumps(auth_state, indent=2))
         ctx.close()
 
-    logging.info("[auth] Login successful. Session stored in browser profile.")
+    logging.info("[auth] Login successful. Session saved to auth.json and browser profile.")
 
 
 @pytest.fixture(scope="session", autouse=True)
