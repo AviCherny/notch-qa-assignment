@@ -4,6 +4,7 @@ E2E test suite for the **Automation Audit** feature on `/config/guardrails`.
 QA home assignment submission.
 
 [![Tests](https://github.com/AviCherny/notch-qa-assignment/actions/workflows/tests.yml/badge.svg)](https://github.com/AviCherny/notch-qa-assignment/actions/workflows/tests.yml)
+[![Allure Report](https://img.shields.io/badge/Allure-Report-orange)](https://avicherny.github.io/notch-qa-assignment/)
 
 ---
 
@@ -55,16 +56,17 @@ Test
 tests/
  ├── conftest.py                         # auth setup + browser/page fixtures + failure diagnostics
  └── e2e/
-     └── test_cancel_playground.py       # TC-03: add "cancel" → save → Playground → assert red
+     ├── test_words_in_message.py        # TC: add "cancel" → save → Playground → assert blocked
+     └── test_failure_demo.py            # xfail(strict=True) — exercises the diagnostics pipeline on every CI run
 
 ui/
- ├── flows.py                            # navigate_to_guardrails(), navigate_to_playground()
+ ├── flows.py                            # navigate_to_guardrails(), run_simulation()
  └── pages/
      ├── base_page.py                    # shared navigate_to() with @allure.step
      ├── automation_audit_page.py        # /config/guardrails — all 4 rule sections
      └── playground_page.py             # /tests/playground — email simulation
 
-config.py                                # BASE_URL, TIMEOUTS, PLAYWRIGHT_TRACE_DIR, PLAYWRIGHT_VIDEO_DIR
+config.py                                # BASE_URL, TIMEOUTS, trace/video output dirs
 pytest.ini                               # markers, log config, -v --tb=short
 .github/workflows/tests.yml              # CI: test → Allure report → GitHub Pages
 ```
@@ -195,6 +197,8 @@ CI publishes the report to GitHub Pages after every push to `main`.
 
 Every push to `main` triggers: **test → Allure report → GitHub Pages deploy**.
 
+Live report: **[avicherny.github.io/notch-qa-assignment](https://avicherny.github.io/notch-qa-assignment/)**
+
 Required GitHub secret:
 
 | Secret | Description |
@@ -214,3 +218,5 @@ Required GitHub secret:
 **`@allure.step` on BasePage** — Every `navigate_to()` call appears as a named step in the Allure report, making the test timeline readable without opening the trace.
 
 **Failure-only tracing and video** — Both tracing and video recording run for every test but are discarded on pass. Only failures produce a trace `.zip` and a video attached to the Allure report — keeps CI storage clean without sacrificing debuggability.
+
+**`test_failure_demo.py`** — A deliberately wrong assertion decorated with `@pytest.mark.xfail(strict=True)`. The test expects to fail; when it does, pytest records it as `XFAIL` (exit code 0) and CI stays green. The value: the Allure diagnostics pipeline (screenshot → video → trace) runs on every CI push, so the failure artifacts are always visible in the report — no need to wait for a real product bug to verify they work.

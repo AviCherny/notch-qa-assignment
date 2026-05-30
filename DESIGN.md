@@ -91,8 +91,10 @@ The triage flow: open the Allure report → find the failed test → open the tr
 
 ## AI Tools Used
 
-I designed the structure first — page objects, fixture model, teardown strategy, selector approach. Claude implemented inside that structure. The architectural decisions were mine; the implementation was collaborative.
+I designed the structure first — page objects, fixture model, teardown strategy, selector approach. Once the skeleton was in place, Claude implemented inside it. The structure was the constraint. That's how I stayed in control of what came out.
 
-When I wasn't sure about a specific behavior (the Windows cookie encryption issue, the `xfail(strict=True)` pattern for demo tests), I cross-checked against documentation and other sources. Claude was fast; I was the constraint on what it was allowed to produce.
+The decisions that required real understanding of the problem were mine: session-scoped auth so the browser login happens once per suite run, not once per test; the `xfail(strict=True)` pattern so the diagnostics pipeline is exercised on every CI push; baseline capture in `get_result()` to handle pre-existing escalated conversations without false positives; `scroll_into_view_if_needed()` before every guardrails interaction because the section sits below the fold on a long page.
+
+When I wasn't sure about a specific behavior (the Windows DPAPI cookie encryption issue, Playwright's storage state API), I cross-checked against documentation. Claude was fast; I was the constraint on what it was allowed to produce.
 
 If something breaks, I open the trace, find the failed step, and I know what happened. I built it that way on purpose.

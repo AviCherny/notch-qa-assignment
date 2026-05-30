@@ -87,6 +87,12 @@ jobs:
 
   deploy:
     needs: [test, report]
+    # test_failure_demo.py uses xfail(strict=True) — it is expected to fail.
+    # An expected failure is recorded as XFAIL by pytest (exit code 0), so the
+    # job result is still 'success' and Pages deploys normally.
+    # If the test unexpectedly passes (XPASS), strict=True causes pytest to exit
+    # with code 1, the job result becomes 'failure', and the deploy is blocked —
+    # which is the correct behaviour (something unexpected changed).
     if: needs.test.result == 'success' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
