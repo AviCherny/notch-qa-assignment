@@ -3,6 +3,8 @@
 E2E test suite for the **Automation Audit** feature on `/config/guardrails`.
 QA home assignment submission.
 
+[![Tests](https://github.com/AviCherny/notch-qa-assignment/actions/workflows/tests.yml/badge.svg)](https://github.com/AviCherny/notch-qa-assignment/actions/workflows/tests.yml)
+
 ---
 
 ## Deliverables

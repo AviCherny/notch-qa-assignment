@@ -91,7 +91,11 @@ def ensure_auth() -> None:
 
 @pytest.fixture(scope="session")
 def browser_type_launch_args(browser_type_launch_args: dict) -> dict:
-    return {**browser_type_launch_args, "channel": "chrome"}
+    return {
+        **browser_type_launch_args,
+        "channel": "chrome",
+        "args": ["--no-sandbox", "--disable-dev-shm-usage"],
+    }
 
 
 @pytest.fixture
