@@ -1,6 +1,8 @@
 import json
 import logging
 import os
+import socket
+import urllib.request
 from pathlib import Path
 
 import allure
@@ -135,17 +137,14 @@ def context(ensure_auth, playwright):
     # Some environments (e.g. machines using ISP DNS that blocks this domain) can't resolve
     # guardio.app.getnotch.dev via the system resolver, while Chrome's built-in DoH works.
     # If system DNS fails, resolve via Google DNS and inject via --host-resolver-rules.
-    import socket
     try:
         socket.getaddrinfo("guardio.app.getnotch.dev", 443)
     except socket.gaierror:
-        import urllib.request
         doh = urllib.request.urlopen(
             "https://dns.google/resolve?name=guardio.app.getnotch.dev&type=A",
             timeout=5,
         )
-        import json as _json
-        answers = _json.loads(doh.read()).get("Answer", [])
+        answers = json.loads(doh.read()).get("Answer", [])
         ip = next((a["data"] for a in answers if a.get("type") == 1), None)
         if ip:
             launch_kwargs["args"] = [f"--host-resolver-rules=MAP guardio.app.getnotch.dev {ip}"]

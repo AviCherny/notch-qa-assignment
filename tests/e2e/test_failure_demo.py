@@ -37,3 +37,4 @@ def test_failure_diagnostics_demo(page):
         f"Expected 'blocked' (wrong by design — actual result is '{result}'). "
         "This failure demonstrates the Allure diagnostic artifacts pipeline."
     )
+

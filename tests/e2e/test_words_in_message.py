@@ -11,6 +11,7 @@ BLOCKED_WORD = "cancel"
 @allure.story("Words in User Message")
 @allure.title("Message body containing a blocked word returns red (AI blocked)")
 def test_blocked_word_in_body_returns_red(page, cleanup_blocked_word):
+    cleanup_blocked_word(SECTION, BLOCKED_WORD)
     audit = flows.navigate_to_guardrails(page)
     audit.add_entry(SECTION, BLOCKED_WORD)
     audit.save()

@@ -5,7 +5,7 @@ import allure
 from ui.pages.base_page import BasePage
 from config import TIMEOUTS
 
-PlaygroundResult = Literal["pass", "blocked"]
+PlaygroundResult = Literal["allowed", "blocked"]
 
 
 class PlaygroundPage(BasePage):
@@ -28,22 +28,20 @@ class PlaygroundPage(BasePage):
         # Fill Customer Email
         self.page.get_by_placeholder("e.g. mark@meta.com", exact=False).fill(from_)
 
-        # Switch Channel to Email (default is Chat)
+        # Switch Channel to Email (default is Chat).
+        # Wait for the option to appear before clicking — avoids timing issues.
         channel_box = self.page.get_by_role("combobox").first
         channel_box.click()
-        self.page.wait_for_timeout(500)
         email_opt = self.page.get_by_role("option", name="Email")
-        if email_opt.count() > 0:
-            email_opt.click()
-        else:
-            self.page.keyboard.press("Escape")
-        self.page.wait_for_timeout(500)
+        email_opt.wait_for(state="visible", timeout=5_000)
+        email_opt.click()
+        # Wait for the dropdown to close before continuing.
+        email_opt.wait_for(state="hidden", timeout=5_000)
 
-        # Scroll the Quill (message body) into view first — this brings both
-        # the Subject input (just above) and the Quill itself into the viewport.
+        # Scroll the Quill (message body) into view — brings Subject input into
+        # the viewport too. scroll_into_view_if_needed() is synchronous; no delay needed.
         quill = self.page.locator("[contenteditable='true']:visible").first
         quill.scroll_into_view_if_needed()
-        self.page.wait_for_timeout(300)
 
         # Fill Subject — the input just above the Quill inside the compose area.
         # Guard with is_visible() to skip gracefully if the layout differs.
@@ -80,4 +78,4 @@ class PlaygroundPage(BasePage):
                 return "blocked"
             self.page.wait_for_timeout(1000)
 
-        return "pass"
+        return "allowed"

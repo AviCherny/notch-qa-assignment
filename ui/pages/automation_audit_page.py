@@ -3,6 +3,7 @@ from typing import Literal
 import allure
 from playwright.sync_api import Locator
 
+from config import TIMEOUTS
 from ui.pages.base_page import BasePage
 
 # Values match the exact heading text rendered in the app (/config/guardrails).
@@ -19,7 +20,6 @@ AuditSection = Literal[
 class AutomationAuditPage(BasePage):
     @allure.step("Navigate to Guardrails config")
     def navigate_to(self) -> None:
-        from config import TIMEOUTS
         super().navigate_to("/config/guardrails")
         # Wait for the guardrails content to render (SPA fetches data after navigation).
         # "Emails patterns" is always the first visible section heading on this page.
@@ -82,11 +82,8 @@ class AutomationAuditPage(BasePage):
         # A confirmation dialog appears after clicking Save.
         # Click the dialog's "Save" button to confirm (distinct from the toolbar button).
         confirm_save = self.page.locator("#page-content").get_by_role("button", name="Save")
-        try:
-            confirm_save.wait_for(state="visible", timeout=5_000)
+        if confirm_save.is_visible():
             confirm_save.click()
-        except Exception:
-            pass  # no confirmation dialog — save went through directly
 
         # Wait for the toolbar (Discard/Save) to disappear — indicates save completed.
         save_btn.wait_for(state="detached", timeout=30_000)
