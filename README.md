@@ -14,6 +14,7 @@ QA home assignment submission.
 |------|------|-------|
 | Part 1 | Test suite design — all 4 sub-features, 50+ test cases | `test-plan-automation-audit.docx` |
 | Part 2 | Playwright implementation — full pipeline E2E | `tests/e2e/` |
+| Design | Rationale behind every key technical decision | [DESIGN.md](DESIGN.md) |
 
 ---
 
@@ -95,7 +96,7 @@ playwright install chromium
 
 ## Auth
 
-The app uses Google OAuth (Descope). Three strategies are supported — the first available one is used:
+The app uses Google OAuth (Descope). Three strategies are applied in order of availability:
 
 ### 1. Saved session (default for local dev)
 
@@ -107,11 +108,9 @@ pytest      # browser opens on first run, reuses session after
 
 To force re-login: `rm auth/auth.json`
 
-### 2. Manual token injection (recommended when session expires)
+### 2. Token injection via env vars (recommended when session expires)
 
-Descope stores the session in **localStorage**, not cookies.
-
-Extract the tokens from Chrome DevTools:
+Descope stores the session in **localStorage**, not cookies. Extract the tokens from Chrome DevTools:
 
 ```
 Chrome → Log in to https://guardio.app.getnotch.dev
@@ -119,30 +118,31 @@ DevTools (F12) → Application → Storage → Local Storage → https://guardio
 Copy the values of "DS" and "DSR" keys
 ```
 
-Then create `auth/auth.json` directly:
+Then set the environment variables — `conftest.py` builds `auth/auth.json` automatically:
 
-**Windows (cmd):**
-```cmd
-python -c "import sys, json; sys.path.insert(0, '.'); from tests.conftest import _create_auth_from_tokens; _create_auth_from_tokens('PASTE_DS_HERE', 'PASTE_DSR_HERE'); print('Done')"
-```
-
-**macOS/Linux:**
-```bash
-python -c "import sys, json; sys.path.insert(0, '.'); from tests.conftest import _create_auth_from_tokens; _create_auth_from_tokens('PASTE_DS_HERE', 'PASTE_DSR_HERE'); print('Done')"
-```
-
-Or with environment variables:
 ```bash
 export NOTCH_DS_TOKEN=<DS value>
 export NOTCH_DSR_TOKEN=<DSR value>
-pytest   # conftest.py builds auth.json automatically
+pytest
 ```
 
-To refresh the session: repeat the steps above with new token values (tokens expire after ~24h).
+Or create `auth/auth.json` directly:
 
-### 3. CI via GitHub secret (`AUTH_JSON_B64`)
+```bash
+python -c "from tests.conftest import _create_auth_from_tokens; _create_auth_from_tokens('PASTE_DS_HERE', 'PASTE_DSR_HERE')"
+```
 
-Generate the secret from an existing local session:
+Tokens expire after ~24h. Repeat to refresh.
+
+### 3. Interactive fallback
+
+If neither `auth/auth.json` nor env vars are available, the fixture opens a real browser window and waits up to 5 minutes for manual login. The session is saved to `auth/auth.json` and strategy 1 takes over on all subsequent runs.
+
+---
+
+### CI setup
+
+CI uses strategy 2 (token injection) via a GitHub secret. Generate the secret from an existing local session:
 
 ```bash
 # Linux / macOS / Git Bash (Windows):
@@ -178,6 +178,8 @@ On test failure, the framework automatically:
 - Saves a **Playwright trace** to `traces/<test_name>.zip`
 
 Open any trace at [trace.playwright.dev](https://trace.playwright.dev) — full timeline, DOM snapshots, network, console.
+
+![Allure failure report example](allure-failure-example.jpg)
 
 ---
 
@@ -220,3 +222,5 @@ Required GitHub secret:
 **Failure-only tracing and video** — Both tracing and video recording run for every test but are discarded on pass. Only failures produce a trace `.zip` and a video attached to the Allure report — keeps CI storage clean without sacrificing debuggability.
 
 **`test_failure_demo.py`** — A deliberately wrong assertion decorated with `@pytest.mark.xfail(strict=True)`. The test expects to fail; when it does, pytest records it as `XFAIL` (exit code 0) and CI stays green. The value: the Allure diagnostics pipeline (screenshot → video → trace) runs on every CI push, so the failure artifacts are always visible in the report — no need to wait for a real product bug to verify they work.
+
+**Cleanup registered before add** — In the test body, `cleanup_blocked_word(SECTION, BLOCKED_WORD)` is called before `add_entry`. This registers the teardown immediately — so even if the test fails during navigation, before the rule is ever added, the cleanup is already scheduled. Defensive by design; costs nothing on the happy path.

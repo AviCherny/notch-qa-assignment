@@ -47,6 +47,8 @@ The test adds a config rule, runs the Playground, then removes the rule in teard
 
 This matters more than it might seem. The Automation Audit config is persistent and shared. If a test fails mid-run and leaves "cancel" in the blocklist, every future run inherits that state, and anyone using the dashboard manually sees a rule they didn't add. The `cleanup_blocked_word` fixture handles teardown with a `yield` — equivalent to `finally` — so the cleanup runs regardless of test outcome.
 
+One non-obvious ordering: `cleanup_blocked_word(SECTION, BLOCKED_WORD)` is called at the start of the test body, before `add_entry`. This registers the cleanup for teardown immediately — so even if the test fails during navigation, before the rule is ever added, the cleanup is already scheduled. This is defensive: it costs nothing on the happy path and prevents stray registrations on early failure.
+
 Each test also gets a fresh browser context from the `page` fixture. No session state, cookies, or localStorage carry over between tests.
 
 ---
@@ -89,12 +91,12 @@ The triage flow: open the Allure report → find the failed test → open the tr
 
 ---
 
-## AI Tools Used
+## Process Notes
 
-I designed the structure first — page objects, fixture model, teardown strategy, selector approach. Once the skeleton was in place, Claude implemented inside it. The structure was the constraint. That's how I stayed in control of what came out.
+I designed the structure first — page objects, fixture model, teardown strategy, selector approach. Once the skeleton was in place, I used Claude to implement inside it. The structure was the constraint. That's how I stayed in control of what came out.
 
 The decisions that required real understanding of the problem were mine: session-scoped auth so the browser login happens once per suite run, not once per test; the `xfail(strict=True)` pattern so the diagnostics pipeline is exercised on every CI push; baseline capture in `get_result()` to handle pre-existing escalated conversations without false positives; `scroll_into_view_if_needed()` before every guardrails interaction because the section sits below the fold on a long page.
 
-When I wasn't sure about a specific behavior (the Windows DPAPI cookie encryption issue, Playwright's storage state API), I cross-checked against documentation. Claude was fast; I was the constraint on what it was allowed to produce.
+When I wasn't sure about a specific behavior (the Windows DPAPI cookie encryption issue, Playwright's storage state API), I cross-checked against documentation. The AI was fast; I was the constraint on what it was allowed to produce.
 
 If something breaks, I open the trace, find the failed step, and I know what happened. I built it that way on purpose.

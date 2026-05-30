@@ -1,26 +1,23 @@
-# Avi's QA Philosophy & Professional Style
-
-This file captures Avi's QA thinking as expressed in the Notch assignment answers.
-Reference for tone, depth, and approach in any QA-related work.
+# QA Philosophy
 
 ---
 
-## Core Philosophy
+## Core Principles
 
 **Quality is a team responsibility, not a QA gatekeeping function.**
-QA should join early (requirements/design), not only at the end before release.
+QA should join early — at requirements and design — not only at the end before release.
 
 **Risk-first, not test-first.**
-Always starts from: what can break, what can cost money, what can hurt customer trust — not from "what tool should I use."
+Start from: what can break, what can cost money, what can hurt customer trust — not from "what tool should I use."
 
 **The most important thing is the real business outcome, not the visible UI state.**
 For an AI product like Notch, the question is not "did it answer?" but "did it make the right decision and why?"
 
 ---
 
-## How Avi Thinks About Testing
+## How I Think About Testing
 
-### Layers always considered:
+### Layers I always consider:
 1. UI behavior (Playwright for critical flows, not everything)
 2. API contracts and responses (Postman for exploration, then automated)
 3. Backend state / actual data (compare outcome across layers — no single source of trust)
@@ -63,12 +60,12 @@ For an AI product like Notch, the question is not "did it answer?" but "did it m
 
 ---
 
-## How Avi Handles Pressure & Dilemmas
+## How I Handle Pressure & Dilemmas
 
 ### Tight deadline pressure:
-- Does not treat testing as all-or-nothing
-- Reduces scope, not thinking: focuses on main flows, risky areas, recent changes
-- Makes the accepted risk explicit: "here's what we tested, here's what we didn't, here's what can still break"
+- Don't treat testing as all-or-nothing
+- Reduce scope, not thinking: focus on main flows, risky areas, recent changes
+- Make the accepted risk explicit: "here's what we tested, here's what we didn't, here's what can still break"
 
 ### Critical bug before release:
 - Validate quickly that it's real (not a flaky failure)
@@ -78,28 +75,18 @@ For an AI product like Notch, the question is not "did it answer?" but "did it m
 
 ### Rare / intermittent bug (1/50, non-critical):
 - Does not block release automatically
-- Documents clearly: reproduction pattern, frequency, evidence, what was checked
-- Blocks only if root cause can affect a critical flow elsewhere
+- Document clearly: reproduction pattern, frequency, evidence, what was checked
+- Block only if root cause can affect a critical flow elsewhere
 
 ### "Working as designed" is not always enough:
-- Pushes back when the requirement passes the ticket but fails the product
+- Push back when the requirement passes the ticket but fails the product
 - Especially relevant for AI: if the agent makes an autonomous decision with real business impact, "it does what the spec says" is not sufficient validation
 
 ---
 
-## Communication Style in QA Work
+## Communication in QA Work
 
 - Clear signal: what is covered, what is risky, what failed, is it ready to release
 - Bug reports: no noise, clear reproduction, evidence, business impact
 - Involvement: early in SDLC, not as last gatekeeper
 - Escalation: comes with evidence + recommendation, not just "blocked"
-
----
-
-## Writing Style (from the assignment answers)
-
-- Short, structured paragraphs — never academic
-- Uses real product context (Notch's playground, audit rules, AI decision-making) as examples
-- Ends each answer with a "So my short answer is:" summary
-- Honest about tradeoffs — doesn't pretend testing is free or that automation solves everything
-- Confident but not arrogant — says "I would push back" but explains the reason

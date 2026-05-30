@@ -35,18 +35,3 @@ Key differentiators:
 - Interviewer has QA mindset himself but needs someone to own and scale it
 - Role includes building automation infrastructure from scratch
 
-## Interview Process
-1. First call (done) — with RnD Group Lead
-2. Home assignment — build test suite, demonstrate quality thinking + automation skills
-3. In-person presentation at their office — walk the interviewer through the work
-4. Deeper dive into Avi's technical knowledge and past experience
-5. Likely a tour/demo of the actual Notch product
-
-## Notes on Interviewer's Background
-- 20 years in industry, first paid code in 2006 (CSS)
-- Frontend/UX/product focus for first 10 years, then moved to leadership/architecture
-- Managed QA and automation at Testim.io (acquired by Tricentis — went downhill post-acquisition)
-- Strong opinions on Appium + BrowserStack for mobile automation
-- Built Selenium-based smart selectors, knows mobile automation pain points deeply
-- Believes in people + process + automation together, not AI replacing engineers
-- Personal: 3 kids (twins age 11, youngest age ~5), lives 8 min walk from the office, into fishing
