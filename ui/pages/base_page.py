@@ -9,7 +9,7 @@ class BasePage:
     @allure.step("Navigate to {url}")
     def navigate_to(self, url: str) -> None:
         self.page.goto(url)
-        self.page.wait_for_load_state("networkidle")
+        self.page.wait_for_load_state("load")
 
     def wait_for_url(self, pattern: str) -> None:
         self.page.wait_for_url(pattern)

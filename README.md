@@ -105,24 +105,38 @@ pytest      # browser opens on first run, reuses session after
 
 To force re-login: `rm auth/auth.json`
 
-### 2. Token injection via environment variables
+### 2. Manual token injection (recommended when session expires)
 
-Extract your session cookies from Chrome DevTools after logging in:
+Descope stores the session in **localStorage**, not cookies.
+
+Extract the tokens from Chrome DevTools:
 
 ```
-Chrome → DevTools → Application → Cookies → guardio.app.getnotch.dev
-Copy the values of "DS" and "DSR" cookies
+Chrome → Log in to https://guardio.app.getnotch.dev
+DevTools (F12) → Application → Storage → Local Storage → https://guardio.app.getnotch.dev
+Copy the values of "DS" and "DSR" keys
 ```
 
-Create a `.env` file (see `.env.example`), then run:
+Then create `auth/auth.json` directly:
 
+**Windows (cmd):**
+```cmd
+python -c "import sys, json; sys.path.insert(0, '.'); from tests.conftest import _create_auth_from_tokens; _create_auth_from_tokens('PASTE_DS_HERE', 'PASTE_DSR_HERE'); print('Done')"
+```
+
+**macOS/Linux:**
 ```bash
-export NOTCH_DS_TOKEN=<your DS cookie value>
-export NOTCH_DSR_TOKEN=<your DSR cookie value>
-pytest
+python -c "import sys, json; sys.path.insert(0, '.'); from tests.conftest import _create_auth_from_tokens; _create_auth_from_tokens('PASTE_DS_HERE', 'PASTE_DSR_HERE'); print('Done')"
 ```
 
-`conftest.py` creates `auth/auth.json` automatically — no interactive login needed.
+Or with environment variables:
+```bash
+export NOTCH_DS_TOKEN=<DS value>
+export NOTCH_DSR_TOKEN=<DSR value>
+pytest   # conftest.py builds auth.json automatically
+```
+
+To refresh the session: repeat the steps above with new token values (tokens expire after ~24h).
 
 ### 3. CI via GitHub secret (`AUTH_JSON_B64`)
 

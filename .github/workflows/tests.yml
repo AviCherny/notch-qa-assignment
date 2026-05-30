@@ -42,6 +42,7 @@ jobs:
           name: allure-results
           path: allure-results/
           retention-days: 1
+          if-no-files-found: warn
 
       - name: Upload Playwright traces
         if: always()
@@ -63,6 +64,7 @@ jobs:
         with:
           name: allure-results
           path: allure-results
+        continue-on-error: true
 
       - name: Generate Allure report
         run: |

@@ -21,21 +21,19 @@ def pytest_runtest_makereport(item, call):
 
 
 def _create_auth_from_tokens(ds: str, dsr: str) -> None:
-    domain = BASE_URL.replace("https://", "").replace("http://", "").split("/")[0]
+    # Notch/Descope stores the session in localStorage (not cookies).
+    origin = BASE_URL.rstrip("/")
     auth_state = {
-        "cookies": [
+        "cookies": [],
+        "origins": [
             {
-                "name": "DS", "value": ds,
-                "domain": domain, "path": "/",
-                "httpOnly": True, "secure": True, "sameSite": "Lax", "expires": -1,
-            },
-            {
-                "name": "DSR", "value": dsr,
-                "domain": domain, "path": "/",
-                "httpOnly": True, "secure": True, "sameSite": "Lax", "expires": -1,
-            },
+                "origin": origin,
+                "localStorage": [
+                    {"name": "DS",  "value": ds},
+                    {"name": "DSR", "value": dsr},
+                ],
+            }
         ],
-        "origins": [],
     }
     AUTH_FILE.parent.mkdir(parents=True, exist_ok=True)
     AUTH_FILE.write_text(json.dumps(auth_state, indent=2))
@@ -47,63 +45,68 @@ def _auth_json_is_valid() -> bool:
         return False
     try:
         data = json.loads(AUTH_FILE.read_text())
-        return bool(data.get("cookies") or data.get("origins"))
+        # Notch/Descope stores DS and DSR tokens in localStorage, not cookies.
+        for origin in data.get("origins", []):
+            ls_keys = {item.get("name") for item in origin.get("localStorage", [])}
+            if ls_keys & {"DS", "DSR"}:
+                return True
+        return False
     except Exception:
         return False
 
 
 def _interactive_login() -> None:
+    if os.getenv("CI"):
+        raise RuntimeError(
+            "[auth] CI environment detected but no valid auth session found.\n"
+            "Set the AUTH_JSON_B64 repository secret to a fresh base64-encoded auth.json,\n"
+            "or set NOTCH_DS_TOKEN + NOTCH_DSR_TOKEN env vars."
+        )
+
     logging.info("[auth] No saved session — opening browser for Google login.")
     print("\n[auth] No saved session found.")
     print("[auth] Opening browser — please sign in with Google.")
     print("[auth] You have 5 minutes.\n")
 
-    BROWSER_PROFILE.mkdir(parents=True, exist_ok=True)
-
+    # Use bundled Chromium (not Chrome) so storage_state() can extract cookies
+    # without DPAPI encryption (Windows Chrome encrypts httpOnly cookies via DPAPI,
+    # making them inaccessible to Playwright's cookie extraction API).
     with sync_playwright() as p:
-        ctx = p.chromium.launch_persistent_context(
-            str(BROWSER_PROFILE),
-            headless=False,
-            channel="chrome",
-            viewport={"width": 1440, "height": 900},
-        )
+        browser = p.chromium.launch(headless=False)
+        ctx = browser.new_context(viewport={"width": 1440, "height": 900})
         page = ctx.new_page()
         page.goto(f"{BASE_URL}/config/guardrails")
         page.bring_to_front()
+        page.wait_for_load_state("load")
 
-        page.wait_for_url(
-            lambda url: "getnotch.dev" in url and "/login" not in url,
-            timeout=300_000,
-        )
-        page.wait_for_load_state("networkidle")
+        # The app is an SPA that shows the login form inline (no /login redirect).
+        # Wait for any state — either the login form or the authenticated app content.
+        # "Sign in to Notch" text only appears on the login page.
+        login_text = page.get_by_text("Sign in to Notch")
+        try:
+            login_text.wait_for(state="visible", timeout=30_000)
+            logging.info("[auth] Login form visible — waiting for user to sign in.")
+        except Exception:
+            logging.info("[auth] Login form not detected — assuming already authenticated.")
 
-        # Extract session from the live page and save to auth.json for CI reuse.
-        # storage_state() on a persistent context returns encrypted/empty cookies on Windows,
-        # so we read directly from the live page context instead.
-        cookies = page.context.cookies()
-        local_storage = page.evaluate(
-            "() => Object.entries(localStorage).map(([name, value]) => ({name, value}))"
-        )
-        origin = BASE_URL.rstrip("/")
-        auth_state = {
-            "cookies": cookies,
-            "origins": [{"origin": origin, "localStorage": local_storage}] if local_storage else [],
-        }
+        # If the login form IS present, wait for it to go away (user signed in).
+        if login_text.is_visible():
+            login_text.wait_for(state="hidden", timeout=300_000)
+            # Give the app and Descope time to finish the auth callback and set cookies.
+            page.wait_for_timeout(5_000)
+
         AUTH_FILE.parent.mkdir(parents=True, exist_ok=True)
-        AUTH_FILE.write_text(json.dumps(auth_state, indent=2))
+        ctx.storage_state(path=str(AUTH_FILE))
         ctx.close()
+        browser.close()
 
-    logging.info("[auth] Login successful. Session saved to auth.json and browser profile.")
+    logging.info("[auth] Login successful. Session saved to auth.json.")
 
 
 @pytest.fixture(scope="session", autouse=True)
 def ensure_auth() -> None:
     if _auth_json_is_valid():
         logging.info("[auth] Reusing saved session from auth.json.")
-        return
-
-    if BROWSER_PROFILE.exists():
-        logging.info("[auth] Reusing browser profile session.")
         return
 
     ds  = os.getenv("NOTCH_DS_TOKEN")
@@ -123,30 +126,45 @@ def context(ensure_auth, playwright):
     # Otherwise, reuse the browser profile from interactive login directly.
     browser_instance = None
 
-    if _auth_json_is_valid():
-        browser_instance = playwright.chromium.launch(channel="chrome")
-        ctx = browser_instance.new_context(
-            storage_state=str(AUTH_FILE),
-            viewport={"width": 1440, "height": 900},
-            base_url=BASE_URL,
-            record_video_dir=PLAYWRIGHT_VIDEO_DIR,
+    # Login is always done via Chromium + storage_state (see _interactive_login).
+    # Chrome channel is preferred on non-CI local runs for closer production fidelity,
+    # but CI only has Playwright's bundled Chromium installed.
+    is_ci = bool(os.getenv("CI"))
+    launch_kwargs: dict = {} if is_ci else {"channel": "chrome"}
+
+    # Some environments (e.g. machines using ISP DNS that blocks this domain) can't resolve
+    # guardio.app.getnotch.dev via the system resolver, while Chrome's built-in DoH works.
+    # If system DNS fails, resolve via Google DNS and inject via --host-resolver-rules.
+    import socket
+    try:
+        socket.getaddrinfo("guardio.app.getnotch.dev", 443)
+    except socket.gaierror:
+        import urllib.request
+        doh = urllib.request.urlopen(
+            "https://dns.google/resolve?name=guardio.app.getnotch.dev&type=A",
+            timeout=5,
         )
-    else:
-        ctx = playwright.chromium.launch_persistent_context(
-            str(BROWSER_PROFILE),
-            channel="chrome",
-            viewport={"width": 1440, "height": 900},
-            base_url=BASE_URL,
-            record_video_dir=PLAYWRIGHT_VIDEO_DIR,
-        )
+        import json as _json
+        answers = _json.loads(doh.read()).get("Answer", [])
+        ip = next((a["data"] for a in answers if a.get("type") == 1), None)
+        if ip:
+            launch_kwargs["args"] = [f"--host-resolver-rules=MAP guardio.app.getnotch.dev {ip}"]
+            logging.info(f"[dns] System DNS failed — using resolved IP {ip} via --host-resolver-rules")
+
+    browser_instance = playwright.chromium.launch(**launch_kwargs)
+    ctx = browser_instance.new_context(
+        storage_state=str(AUTH_FILE),
+        viewport={"width": 1440, "height": 900},
+        base_url=BASE_URL,
+        record_video_dir=PLAYWRIGHT_VIDEO_DIR,
+    )
 
     ctx.set_default_timeout(TIMEOUTS["element"])
     ctx.set_default_navigation_timeout(TIMEOUTS["navigation"])
     ctx.tracing.start(screenshots=True, snapshots=True, sources=True)
     yield ctx
     ctx.close()
-    if browser_instance:
-        browser_instance.close()
+    browser_instance.close()
 
 
 @pytest.fixture

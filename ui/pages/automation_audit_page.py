@@ -19,7 +19,13 @@ AuditSection = Literal[
 class AutomationAuditPage(BasePage):
     @allure.step("Navigate to Guardrails config")
     def navigate_to(self) -> None:
+        from config import TIMEOUTS
         super().navigate_to("/config/guardrails")
+        # Wait for the guardrails content to render (SPA fetches data after navigation).
+        # "Emails patterns" is always the first visible section heading on this page.
+        self.page.get_by_text("Emails patterns", exact=False).wait_for(
+            state="visible", timeout=TIMEOUTS["element"]
+        )
 
     def _section_card(self, title: AuditSection) -> Locator:
         return (
@@ -67,8 +73,22 @@ class AutomationAuditPage(BasePage):
 
     @allure.step("Save config changes")
     def save(self) -> None:
-        save_btn = self.page.get_by_role("button", name="Save")
+        # Use data-testid to avoid strict-mode violation when multiple "Save" buttons exist.
+        save_btn = self.page.get_by_test_id("config-save-button")
+        if save_btn.count() == 0:
+            return  # no pending changes — toolbar not visible
         save_btn.click()
-        save_btn.wait_for(state="detached", timeout=10_000)  # toolbar disappears on success
-        self.page.wait_for_load_state("networkidle")
+
+        # A confirmation dialog appears after clicking Save.
+        # Click the dialog's "Save" button to confirm (distinct from the toolbar button).
+        confirm_save = self.page.locator("#page-content").get_by_role("button", name="Save")
+        try:
+            confirm_save.wait_for(state="visible", timeout=5_000)
+            confirm_save.click()
+        except Exception:
+            pass  # no confirmation dialog — save went through directly
+
+        # Wait for the toolbar (Discard/Save) to disappear — indicates save completed.
+        save_btn.wait_for(state="detached", timeout=30_000)
+        self.page.wait_for_load_state("load")
 
