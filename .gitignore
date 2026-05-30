@@ -15,6 +15,7 @@ auth/auth.json
 test-results/
 .pytest_cache/
 traces/
+videos/
 
 # Allure reporting
 allure-results/

@@ -6,6 +6,15 @@ SECTION = "Words in User Message"
 BLOCKED_WORD = "cancel"
 
 
+@pytest.fixture
+def cleanup_blocked_word(page):
+    """Remove the test keyword after the test, even on failure."""
+    yield
+    audit = flows.navigate_to_guardrails(page)
+    audit.remove_entry(SECTION, BLOCKED_WORD)
+    audit.save()
+
+
 @pytest.mark.e2e
 @allure.feature("Automation Audit")
 @allure.story("Words in User Message")

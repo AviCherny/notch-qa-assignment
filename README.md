@@ -89,6 +89,13 @@ playwright install chromium
 
 ---
 
+## Network Access
+
+The test target (`guardio.app.getnotch.dev`) is only accessible from the Notch internal network.
+Run tests while connected to the Notch VPN or from within the office network.
+
+---
+
 ## Auth
 
 The app uses Google OAuth (Descope). Three strategies are supported — the first available one is used:
