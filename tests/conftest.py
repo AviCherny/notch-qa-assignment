@@ -9,7 +9,7 @@ import allure
 import pytest
 from playwright.sync_api import sync_playwright
 
-from config import BASE_URL, PLAYWRIGHT_TRACE_DIR, PLAYWRIGHT_VIDEO_DIR, TIMEOUTS
+from config import BASE_URL, HEADED, PLAYWRIGHT_TRACE_DIR, PLAYWRIGHT_VIDEO_DIR, TIMEOUTS
 
 AUTH_FILE       = Path(__file__).parent.parent / "auth" / "auth.json"
 BROWSER_PROFILE = Path(__file__).parent.parent / ".browser-profile"
@@ -148,7 +148,7 @@ def context(ensure_auth, playwright):
             launch_kwargs["args"] = [f"--host-resolver-rules=MAP guardio.app.getnotch.dev {ip}"]
             logging.info(f"[dns] System DNS failed — using resolved IP {ip} via --host-resolver-rules")
 
-    browser_instance = playwright.chromium.launch(**launch_kwargs)
+    browser_instance = playwright.chromium.launch(**launch_kwargs, headless=not HEADED)
     ctx = browser_instance.new_context(
         storage_state=str(AUTH_FILE),
         viewport={"width": 1440, "height": 900},

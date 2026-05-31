@@ -8,5 +8,7 @@ TIMEOUTS = {
     "result":     60_000,
 }
 
+HEADED = os.getenv("HEADED", "false").lower() == "true"
+
 PLAYWRIGHT_TRACE_DIR = "traces/"
 PLAYWRIGHT_VIDEO_DIR = "videos/"
