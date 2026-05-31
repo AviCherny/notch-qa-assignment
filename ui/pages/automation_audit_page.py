@@ -21,8 +21,7 @@ class AutomationAuditPage(BasePage):
     @allure.step("Navigate to Guardrails config")
     def navigate_to(self) -> None:
         super().navigate_to("/config/guardrails")
-        # Wait for the guardrails content to render (SPA fetches data after navigation).
-        # "Emails patterns" is always the first visible section heading on this page.
+        # "Emails patterns" is the first section heading — confirms content loaded.
         self.page.get_by_text("Emails patterns", exact=False).wait_for(
             state="visible", timeout=TIMEOUTS["element"]
         )
@@ -46,7 +45,7 @@ class AutomationAuditPage(BasePage):
         inp.press("Enter")
 
         # exact=False — chip textContent includes "×" as a child element
-        card.get_by_text(value, exact=False).first.wait_for(state="visible", timeout=8_000)
+        card.get_by_text(value, exact=False).first.wait_for(state="visible", timeout=TIMEOUTS["element"])
 
     @allure.step("Remove '{value}' from {section}")
     def remove_entry(self, section: AuditSection, value: str) -> None:
@@ -69,7 +68,7 @@ class AutomationAuditPage(BasePage):
             card.get_by_role("textbox").click()
             card.get_by_role("textbox").press("Backspace")
 
-        chip_text.wait_for(state="detached", timeout=8_000)
+        chip_text.wait_for(state="detached", timeout=TIMEOUTS["element"])
 
     @allure.step("Save config changes")
     def save(self) -> None:
@@ -86,6 +85,6 @@ class AutomationAuditPage(BasePage):
             confirm_save.click()
 
         # Wait for the toolbar (Discard/Save) to disappear — indicates save completed.
-        save_btn.wait_for(state="detached", timeout=30_000)
+        save_btn.wait_for(state="detached", timeout=TIMEOUTS["element"])
         self.page.wait_for_load_state("load")
 

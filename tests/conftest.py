@@ -47,7 +47,6 @@ def _auth_json_is_valid() -> bool:
         return False
     try:
         data = json.loads(AUTH_FILE.read_text())
-        # Notch/Descope stores DS and DSR tokens in localStorage, not cookies.
         for origin in data.get("origins", []):
             ls_keys = {item.get("name") for item in origin.get("localStorage", [])}
             if ls_keys & {"DS", "DSR"}:
@@ -91,11 +90,10 @@ def _interactive_login() -> None:
         except Exception:
             logging.info("[auth] Login form not detected — assuming already authenticated.")
 
-        # If the login form IS present, wait for it to go away (user signed in).
         if login_text.is_visible():
             login_text.wait_for(state="hidden", timeout=300_000)
-            # Give the app and Descope time to finish the auth callback and set cookies.
-            page.wait_for_timeout(5_000)
+            # Wait for Descope to write the DS token to localStorage before capturing state.
+            page.wait_for_function("() => window.localStorage.getItem('DS') !== null", timeout=10_000)
 
         AUTH_FILE.parent.mkdir(parents=True, exist_ok=True)
         ctx.storage_state(path=str(AUTH_FILE))

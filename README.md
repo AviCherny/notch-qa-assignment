@@ -8,16 +8,6 @@ QA home assignment submission.
 
 ---
 
-## Deliverables
-
-| Part | What | Where |
-|------|------|-------|
-| Part 1 | Test suite design — all 4 sub-features, 50+ test cases | `test-plan-automation-audit.docx` |
-| Part 2 | Playwright implementation — full pipeline E2E | `tests/e2e/` |
-| Design | Rationale behind every key technical decision | [DESIGN.md](DESIGN.md) |
-
----
-
 ## What's Being Tested
 
 The **Automation Audit** section defines deterministic rules controlling whether the AI responds or hands off to a human.
@@ -30,6 +20,16 @@ The **Automation Audit** section defines deterministic rules controlling whether
 | Words in Assistant's Reply | AI draft reply | Suppress reply, hand to human |
 
 The implemented test covers **Words in User Message** — the full pipeline from config rule to Playground result.
+
+---
+
+## Deliverables
+
+| Part | What | Where |
+|------|------|-------|
+| Part 1 | Test suite design — all 4 sub-features, 50+ test cases | `test-plan-automation-audit.docx` |
+| Part 2 | Playwright implementation — full pipeline E2E | `tests/e2e/` |
+| Design | Rationale behind every key technical decision | [DESIGN.md](DESIGN.md) |
 
 ---
 
@@ -48,15 +48,10 @@ The implemented test covers **Words in User Message** — the full pipeline from
 ## Architecture
 
 ```
-Test
- └── Page Object (extends BasePage)
-       └── BasePage — @allure.step navigate_to(), wait_for_load_state()
-```
-
-```
 tests/
  ├── conftest.py                         # auth setup + browser/page fixtures + failure diagnostics
  └── e2e/
+     ├── conftest.py                     # cleanup fixture factory
      ├── test_words_in_message.py        # TC: add "cancel" → save → Playground → assert blocked
      └── test_failure_demo.py            # xfail(strict=True) — exercises the diagnostics pipeline on every CI run
 
@@ -179,7 +174,7 @@ On test failure, the framework automatically:
 
 Open any trace at [trace.playwright.dev](https://trace.playwright.dev) — full timeline, DOM snapshots, network, console.
 
-![Allure failure report example](allure-failure-example.jpg)
+![Allure failure report example](docs/allure-failure-example.jpg)
 
 ---
 

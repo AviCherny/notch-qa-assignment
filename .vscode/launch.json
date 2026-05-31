@@ -6,7 +6,7 @@
       "type": "debugpy",
       "request": "launch",
       "module": "pytest",
-      "args": ["tests/e2e", "-v", "-m", "e2e"],
+      "args": ["tests/e2e", "-v", "-m", "e2e", "--headed"],
       "console": "integratedTerminal",
       "justMyCode": true
     }

@@ -1,7 +1,8 @@
 {
   "python.defaultInterpreterPath": "${workspaceFolder}/venv/Scripts/python.exe",
   "python.testing.pytestEnabled": true,
-  "python.testing.pytestArgs": ["tests"],
+  "python.testing.pytestArgs": ["tests", "--headed"],
   "python.testing.unittestEnabled": false,
-  "python.testing.cwd": "${workspaceFolder}"
+  "python.testing.cwd": "${workspaceFolder}",
+  "python-envs.defaultEnvManager": "ms-python.python:system"
 }

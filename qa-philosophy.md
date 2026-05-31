@@ -53,7 +53,6 @@ For an AI product like Notch, the question is not "did it answer?" but "did it m
 - **Playwright** — UI automation + API request layer + traces/screenshots for debugging
 - **Postman** — API exploration before automation (understand before automating)
 - **Browser DevTools** — Network, Console, Application tabs; debugging by layer
-- **Jira + Xray** — Test management, traceability, release visibility (kept practical, not overhead)
 - **Git** — Real structure for automation suites (folders, naming, tags)
 - **CI/CD** — Sanity on PRs, regression on release/schedule
 - **Allure / Playwright reports** — Fast failure analysis
