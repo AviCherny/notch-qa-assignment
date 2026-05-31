@@ -73,6 +73,10 @@ Every failed test automatically captures:
 
 Tracing and video run for every test but are discarded on pass. Only failures produce a persistent artifact. This keeps CI storage clean without sacrificing debuggability on the runs that matter.
 
+`@allure.step` is applied to `navigate_to()` on `BasePage` — so every page navigation appears as a named step in the Allure timeline. This makes a failed test readable at a glance without needing to open the trace. The trace is for when the Allure step view isn't enough.
+
+`test_failure_demo.py` is a deliberately wrong assertion marked `@pytest.mark.xfail(strict=True)`. The test expects to fail; pytest records it as `XFAIL` (exit code 0) and CI stays green. The point: the full diagnostics pipeline (screenshot → video → trace) runs on every push, so failure artifacts are always visible in the report — no waiting for a real product bug to verify they work.
+
 The triage flow: open the Allure report → find the failed test → open the trace → find the failed step → look at the DOM and network state at that point. In most cases that's enough to distinguish a product bug from an environment issue from a test bug.
 
 ---

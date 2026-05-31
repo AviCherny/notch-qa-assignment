@@ -209,18 +209,3 @@ Required GitHub secret:
 
 ---
 
-## Design Decisions
-
-**Selector strategy** — All selectors anchor on visible text or ARIA roles, never on CSS class hashes. Hashes change on every rebuild; text content changes only when the product copy changes intentionally.
-
-**Test isolation** — The test cleans up after itself in a `finally` block, even on failure. No test leaves state in the system.
-
-**Save before Playground** — The config UI operates in draft mode. The test explicitly calls `save()` after adding a rule — this is the step that pushes the rule to the AI pipeline. Without it, the Playground result would not reflect the config change.
-
-**`@allure.step` on BasePage** — Every `navigate_to()` call appears as a named step in the Allure report, making the test timeline readable without opening the trace.
-
-**Failure-only tracing and video** — Both tracing and video recording run for every test but are discarded on pass. Only failures produce a trace `.zip` and a video attached to the Allure report — keeps CI storage clean without sacrificing debuggability.
-
-**`test_failure_demo.py`** — A deliberately wrong assertion decorated with `@pytest.mark.xfail(strict=True)`. The test expects to fail; when it does, pytest records it as `XFAIL` (exit code 0) and CI stays green. The value: the Allure diagnostics pipeline (screenshot → video → trace) runs on every CI push, so the failure artifacts are always visible in the report — no need to wait for a real product bug to verify they work.
-
-**Cleanup registered before add** — In the test body, `cleanup_blocked_word(SECTION, BLOCKED_WORD)` is called before `add_entry`. This registers the teardown immediately — so even if the test fails during navigation, before the rule is ever added, the cleanup is already scheduled. Defensive by design; costs nothing on the happy path.
