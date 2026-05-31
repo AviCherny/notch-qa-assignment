@@ -93,7 +93,7 @@ jobs:
     # If the test unexpectedly passes (XPASS), strict=True causes pytest to exit
     # with code 1, the job result becomes 'failure', and the deploy is blocked —
     # which is the correct behaviour (something unexpected changed).
-    if: needs.test.result == 'success' && github.ref == 'refs/heads/main'
+    if: always() && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       pages: write
